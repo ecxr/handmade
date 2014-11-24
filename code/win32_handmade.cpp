@@ -30,7 +30,7 @@ Win32ResizeDIBSection(int Width, int Height)
         DeleteObject(BitmapHandle);
     }
 
-    if (BitmapDeviceContext)
+    if (!BitmapDeviceContext)
     {
         // TODO(sky): Should we recreate these under certain special circumstances?
         BitmapDeviceContext = CreateCompatibleDC(0);
@@ -43,6 +43,7 @@ Win32ResizeDIBSection(int Width, int Height)
     BitmapInfo.bmiHeader.biBitCount = 32;
     BitmapInfo.bmiHeader.biCompression = BI_RGB;
 
+    // TODO(sky): Based on ssylvan's suggestion, maybe we can just allocate this overselves?
     BitmapHandle = CreateDIBSection(
         BitmapDeviceContext, &BitmapInfo,
         DIB_RGB_COLORS,
@@ -53,7 +54,7 @@ Win32ResizeDIBSection(int Width, int Height)
 internal void
 Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
 {
-    StretchDIBits(DeviceContext,
+     StretchDIBits(DeviceContext,
                    X, Y, Width, Height,
                    X, Y, Width, Height,
                    BitmapMemory,
@@ -70,7 +71,7 @@ Win32MainWindowCallback(HWND Window,
     LRESULT Result = 0;
 
     switch(Message)
-x    {
+    {
         case WM_SIZE:
         {
             RECT ClientRect;
@@ -98,6 +99,11 @@ x    {
             OutputDebugStringA("WM_DESTROY\n");
         } break;
         
+        case WM_CHAR:
+        {
+            OutputDebugStringA("WM_CHAR\n");
+        } break;
+
         case WM_PAINT:
         {
             PAINTSTRUCT Paint;
@@ -107,16 +113,6 @@ x    {
             int Width = Paint.rcPaint.right - Paint.rcPaint.left;
             int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
             Win32UpdateWindow(DeviceContext, X, Y, Width, Height);
-            local_persist DWORD Operation = WHITENESS;            
-            PatBlt(DeviceContext, X, Y, Width, Height, Operation);
-            if(Operation == WHITENESS)
-            {
-                Operation = BLACKNESS;
-            }
-            else
-            {
-                Operation = WHITENESS;
-            }
             EndPaint(Window, &Paint);
         } break;
         

@@ -26,8 +26,6 @@
 (setq shift-select-mode nil)
 (setq enable-local-variables nil)
 
-(set-face-attribute 'default nil :height 100)
-
 (setq casey-font "outline-DejaVu Sans Mono")
 
 (when casey-win32 
@@ -306,8 +304,8 @@
   (define-key c++-mode-map "\es" 'casey-save-buffer)
 
   (define-key c++-mode-map "\t" 'dabbrev-expand)
-  (define-key c++-mode-map [S-tab] 'indent-for-tab-command)
-  (define-key c++-mode-map "\C-y" 'indent-for-tab-command)
+  (define-key c++-mode-map [S-tab] 'indent-region)
+;  (define-key c++-mode-map "\C-y" 'indent-for-tab-command)
   (define-key c++-mode-map [C-tab] 'indent-region)
   (define-key c++-mode-map "	" 'indent-region)
 
@@ -559,10 +557,10 @@
  '(mouse-wheel-scroll-amount (quote (15)))
  '(version-control nil))
 
-(define-key global-map "\t" 'dabbrev-expand)
+;(define-key global-map "\t" 'dabbrev-expand)
 (define-key global-map [S-tab] 'indent-for-tab-command)
 (define-key global-map [backtab] 'indent-for-tab-command)
-(define-key global-map "\C-y" 'indent-for-tab-command)
+;(define-key global-map "\C-y" 'indent-for-tab-command)
 (define-key global-map [C-tab] 'indent-region)
 (define-key global-map "	" 'indent-region)
 
@@ -571,8 +569,8 @@
     nil)
 (setq split-window-preferred-function 'casey-never-split-a-window)
 
-(add-to-list 'default-frame-alist '(font . "Liberation Mono-11.5"))
-(set-face-attribute 'default t :font "Liberation Mono-11.5")
+(add-to-list 'default-frame-alist '(font . "Consolas-10"))
+(set-face-attribute 'default t :font "Consolas-10")
 (set-face-attribute 'font-lock-builtin-face nil :foreground "#DAB98F")
 (set-face-attribute 'font-lock-comment-face nil :foreground "gray50")
 (set-face-attribute 'font-lock-constant-face nil :foreground "olive drab")
@@ -582,6 +580,7 @@
 (set-face-attribute 'font-lock-string-face nil :foreground "olive drab")
 (set-face-attribute 'font-lock-type-face nil :foreground "burlywood3")
 (set-face-attribute 'font-lock-variable-name-face nil :foreground "burlywood3")
+(set-face-attribute 'default nil :height 100)
 
 (defun post-load-stuff ()
   (interactive)
