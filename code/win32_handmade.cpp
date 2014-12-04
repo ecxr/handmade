@@ -63,7 +63,10 @@ Win32LoadXInput(void)
     if (XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
+        if (!XInputGetState) {XInputGetState = XInputGetStateStub;}
+
         XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
+        if (!XInputSetState) {XInputSetState = XInputSetStateStub;}
     }
 }
 
@@ -358,13 +361,12 @@ WinMain(HINSTANCE Instance,
                         bool XButton = (Pad->wButtons & XINPUT_GAMEPAD_X);
                         bool YButton = (Pad->wButtons & XINPUT_GAMEPAD_Y);
 
+
                         int16_t StickX = Pad->sThumbLX;
                         int16_t StickY = Pad->sThumbLY;
 
-                        if (AButton)
-                        {
-                            YOffset += 2;
-                        }
+                        XOffset -= StickX >> 12;
+                        YOffset += StickY >> 12;
                     }
                     else
                     {
