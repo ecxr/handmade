@@ -569,8 +569,8 @@
     nil)
 (setq split-window-preferred-function 'casey-never-split-a-window)
 
-(add-to-list 'default-frame-alist '(font . "Consolas-10"))
-(set-face-attribute 'default t :font "Consolas-10")
+(add-to-list 'default-frame-alist '(font . "Consolas-9"))
+(set-face-attribute 'default t :font "Consolas-9")
 (set-face-attribute 'font-lock-builtin-face nil :foreground "#DAB98F")
 (set-face-attribute 'font-lock-comment-face nil :foreground "gray50")
 (set-face-attribute 'font-lock-constant-face nil :foreground "olive drab")

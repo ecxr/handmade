@@ -38,6 +38,7 @@ struct win32_window_dimension
 // TODO(sky): This is global for now.
 global_variable bool GlobalRunning;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
+global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 
 // NOTE(sky): XInputGetState
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
@@ -156,8 +157,7 @@ Win32InitDSound(HWND Window, int32_t SamplesPerSecond, int32_t BufferSize)
             BufferDescription.dwFlags = 0;
             BufferDescription.dwBufferBytes = BufferSize;
             BufferDescription.lpwfxFormat = &WaveFormat;
-            LPDIRECTSOUNDBUFFER SecondaryBuffer;
-            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0);
+            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
             if (SUCCEEDED(Error))
             {
                     OutputDebugStringA("Secondary buffer created successfully.\n");
@@ -428,12 +428,24 @@ WinMain(HINSTANCE Instance,
             // get one device context and use it forever because we
             // are not sharing it with anyone.
             HDC DeviceContext = GetDC(Window);
-            
+
+            // NOTE(sky): Graphics test
             int XOffset = 0;
             int YOffset = 0;
 
-            Win32InitDSound(Window, 48000, 48000*sizeof(int16_t)*2);
-            
+            // NOTE(sky): Sound test
+            int SamplesPerSecond = 48000;
+            int ToneHz = 256;
+            int16_t ToneVolume = 3000;
+            uint32_t RunningSampleIndex  = 0;
+            int SquareWavePeriod = SamplesPerSecond/ToneHz;
+            int HalfSquareWavePeriod = SquareWavePeriod / 2;
+            int BytesPerSample = sizeof(int16_t)*2;
+            int SecondaryBufferSize = SamplesPerSecond * BytesPerSample;
+
+            Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);
+            bool SoundIsPlaying = false;
+  
             GlobalRunning = true;
             while (GlobalRunning)
             {
@@ -474,7 +486,6 @@ WinMain(HINSTANCE Instance,
                         bool XButton = (Pad->wButtons & XINPUT_GAMEPAD_X);
                         bool YButton = (Pad->wButtons & XINPUT_GAMEPAD_Y);
 
-
                         int16_t StickX = Pad->sThumbLX;
                         int16_t StickY = Pad->sThumbLY;
 
@@ -496,11 +507,81 @@ WinMain(HINSTANCE Instance,
                 
                 RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
 
+                // NOTE(sky): DirectSound ouput test
+                DWORD PlayCursor;
+                DWORD WriteCursor;
+                if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+                {
+                    DWORD BytesToLock = (RunningSampleIndex * BytesPerSample) % SecondaryBufferSize;
+                    DWORD BytesToWrite;
+                    if (BytesToLock == PlayCursor)
+                    {
+                        BytesToWrite = SecondaryBufferSize;
+                    }
+                    else if (BytesToLock > PlayCursor)
+                    {
+                        BytesToWrite = SecondaryBufferSize - BytesToLock;
+                        BytesToWrite += PlayCursor;
+                    }
+                    else
+                    {
+                        BytesToWrite = PlayCursor - BytesToLock;
+                    }
+                    
+                    // int16  int16  ...
+                    // [LEFT  RIGHT] LEFT RIGHT LEFT RIGHT ...
+                    //
+                    // TODO(sky): More strenuous test!
+                    VOID  *Region1;
+                    DWORD Region1Size;
+                    VOID  *Region2;
+                    DWORD Region2Size;
+
+                    if (SUCCEEDED(GlobalSecondaryBuffer->Lock(BytesToLock, BytesToWrite,
+                                                              &Region1, &Region1Size,
+                                                              &Region2, &Region2Size,
+                                                              0)))
+                    {
+                        // TODO(sky): assert that Region1Size/Region2Size is valid
+
+                        DWORD Region1SampleCount = Region1Size / BytesPerSample;
+                        int16_t *SampleOut = (int16_t *)Region1;
+                        for(DWORD SampleIndex = 0;
+                            SampleIndex < Region1SampleCount;
+                            ++SampleIndex)
+                        {
+                            int16_t SampleValue =
+                                ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+                            *SampleOut++ = SampleValue;
+                            *SampleOut++ = SampleValue;
+                        }
+
+                        DWORD Region2SampleCount = Region2Size / BytesPerSample;
+                        SampleOut = (int16_t *)Region2;
+                        for(DWORD SampleIndex = 0;
+                            SampleIndex < Region2SampleCount;
+                            ++SampleIndex)
+                        {
+                            int16_t SampleValue =
+                                ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+                            *SampleOut++ = SampleValue;
+                            *SampleOut++ = SampleValue;
+                        }
+                        GlobalSecondaryBuffer->Unlock(Region1, Region1Size,
+                                                      Region2, Region2Size);
+                    }
+                }
+
+                if (!SoundIsPlaying)
+                {
+                    GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+                    SoundIsPlaying = true;
+                }
+                
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext,
                                            Dimension.Width, Dimension.Height);
-                                           
-                
+               
                 //++XOffset;
             }
         }
