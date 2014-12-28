@@ -532,6 +532,7 @@ WinMain(HINSTANCE Instance,
                     // [LEFT  RIGHT] LEFT RIGHT LEFT RIGHT ...
                     //
                     // TODO(sky): More strenuous test!
+                    // TODO(sky): Switch to a sine wave
                     VOID  *Region1;
                     DWORD Region1Size;
                     VOID  *Region2;
