@@ -6,14 +6,28 @@
    $Notice: (C) Copyright 2014 by Fiendish Enterprises, Inc. All Rights Reserved. $
    ======================================================================== */
 
-#include <windows.h>
-#include <stdint.h>
-#include <xinput.h>
-#include <dsound.h>
+/*
+  TODO(sky): THIS IS NOT A FINAL PLATFORM LAYER
 
-// TODO(sky): Implement sine ourselves
-#include <math.h>
-#include <stdio.h>
+  - Saved game locations
+  - Getting a handle to our own executable file
+  - Asset loading path
+  - Threading (launch a thread)
+  - Raw input (support for multiple keyboards)
+  - Sleep/timeBeginPeriod
+  - ClipCursor() (multimonitor support)
+  - Fullscreen support
+  - WM_SETCURSOR (control cursor visibility)
+  - QueryCancelAutoplay
+  - AM_ACTIVEAPP (for when we are not the active application)
+  - Blit speed improvements (BitBlt)
+  - Hardware acceleration (OpenGL or Direct3d or BOTH???)
+  - GetKeyboardLayout (for French keyboards, international WASD support)
+
+  Just a partion list of stuff!!!
+*/
+
+#include <stdint.h>
 
 #define internal static
 #define local_persist static
@@ -24,6 +38,16 @@
 typedef int32_t bool32;
 typedef float real32;
 typedef double real64;
+
+#include "handmade.cpp"
+
+#include <windows.h>
+#include <xinput.h>
+#include <dsound.h>
+#include <stdio.h>
+
+// TODO(sky): Implement sine ourselves
+#include <math.h>
 
 struct win32_offscreen_buffer
 {
@@ -194,38 +218,6 @@ Win32GetWindowDimension(HWND Window)
     Result.Height = ClientRect.bottom - ClientRect.top;
 
     return(Result);
-}
-
-internal void
-RenderWeirdGradient(win32_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
-{
-    // TODO(sky): Lets see what the optimizer does
-
-    uint8_t *Row = (uint8_t *)Buffer->Memory;
-    for (int Y = 0;
-         Y < Buffer->Height;
-         ++Y)
-    {
-        uint32_t *Pixel = (uint32_t *)Row;
-        for (int X = 0;
-             X < Buffer->Width;
-             ++X)
-        {
-            /*
-			  Little Endian Architecture
-              3  2  1  0
-              Pixel in memory: 00 00 00 00
-              BB GG RR XX
-              Register:        xx RR GG BB
-            */
-            uint8_t Blue = (uint8_t)(X + BlueOffset);
-            uint8_t Green = (uint8_t)(Y + GreenOffset);
-
-            *Pixel++ = ((Green << 8) | Blue);
-        }
-
-        Row += Buffer->Pitch;
-    }
 }
 
 internal void
@@ -418,7 +410,6 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD BytesToLock, DWORD B
     // [LEFT  RIGHT] LEFT RIGHT LEFT RIGHT ...
     //
     // TODO(sky): More strenuous test!
-    // TODO(sky): Switch to a sine wave
     VOID  *Region1;
     DWORD Region1Size;
     VOID  *Region2;
@@ -601,8 +592,14 @@ WinMain(HINSTANCE Instance,
                 Vibration.wRightMotorSpeed = 60000;
                 XInputSetState(0, &Vibration);
 #endif
+
+                game_offscreen_buffer Buffer = {};
+                Buffer.Memory = GlobalBackbuffer.Memory;
+                Buffer.Width = GlobalBackbuffer.Width;
+                Buffer.Height = GlobalBackbuffer.Height;
+                Buffer.Pitch = GlobalBackbuffer.Pitch;
                 
-                RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
+                GameUpdateandRender(&Buffer, XOffset, YOffset);
 
                 // NOTE(sky): DirectSound ouput test
                 DWORD PlayCursor;
@@ -617,8 +614,6 @@ WinMain(HINSTANCE Instance,
                           (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) %
                          SoundOutput.SecondaryBufferSize);
                     DWORD BytesToWrite;
-                    // TODO(sky): Change this to a lower latency offset from the playcursor
-                    // when we actually start having sound effects
                     if (BytesToLock > TargetCursor)
                     {
                         BytesToWrite = SoundOutput.SecondaryBufferSize - BytesToLock;
@@ -641,16 +636,17 @@ WinMain(HINSTANCE Instance,
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
 
-                // TOOD(sky): Display the value here
                 int64_t CyclesElapsed = EndCycleCount - LastCycleCount;
                 int64_t CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
                 real32 MSPerFrame = (real32)((1000.0f*(real32)CounterElapsed) / (real32)PerfCountFrequency);
                 real32 FPS = (real32)PerfCountFrequency / (real32)CounterElapsed;
                 real32 MCPF = ((real32)(CyclesElapsed) / (1000.0f * 1000.0f));
-                
+
+#if 0                
                 char Buffer[256];
                 sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fmc/f\n", MSPerFrame, FPS, MCPF);
                 OutputDebugStringA(Buffer);
+#endif
                 
                 LastCounter = EndCounter;
                 LastCycleCount = EndCycleCount;
@@ -667,4 +663,10 @@ WinMain(HINSTANCE Instance,
     }
     
     return(0);
+}
+
+void *
+PlatformLoadFile(char *FileName)
+{
+    return NULL;
 }
