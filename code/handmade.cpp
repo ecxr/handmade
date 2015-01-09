@@ -9,6 +9,28 @@
 #include "handmade.h"
 
 internal void
+GameOutputSound(game_sound_output_buffer *SoundBuffer, int ToneHz)
+{
+    local_persist real32 tSine;
+    int16_t ToneVolume = 3000;
+    int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
+    
+    int16_t *SampleOut = SoundBuffer->Samples;
+    for(int SampleIndex = 0;
+        SampleIndex < SoundBuffer->SampleCount;
+        ++SampleIndex)
+    {
+        // TODO(sky): Draw this out for people
+        real32 SineValue = sinf(tSine);
+        int16_t SampleValue = (int16_t)(SineValue * ToneVolume);
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+
+        tSine += 2.0f*Pi32*1.0f/(real32)WavePeriod;
+    }
+}
+
+internal void
 RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
 {
     // TODO(sky): Lets see what the optimizer does
@@ -41,9 +63,10 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffs
 }
 
 internal void
-GameUpdateandRender(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
+GameUpdateandRender(game_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset,
+                    game_sound_output_buffer *SoundBuffer, int ToneHz)
 {
-//    int BlueOffset = 0;
-//    int GreenOffset = 0;
+    // TODO(sky): Allow sample offsets here for more robust platform options
+    GameOutputSound(SoundBuffer, ToneHz);
     RenderWeirdGradient(Buffer, BlueOffset, GreenOffset);
 }
